@@ -1,42 +1,49 @@
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
-const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
-const SECRET = process.env.JWT_SECRET;
+const User = require("./models/User");
 
-// DERIV LOGIN
-router.post("/deriv-login", async (req, res) => {
-    try {
-        const { derivToken } = req.body;
+// ======================
+// REGISTER
+// ======================
+router.post("/register", async (req, res) => {
+  try {
+    const { email, phone, password } = req.body;
 
-        // Verify token with Deriv API
-        const response = await axios.post("https://api.deriv.com/api/account", {
-            token: derivToken
-        });
-
-        if (!response.data) {
-            return res.status(400).json({ message: "Invalid token" });
-        }
-
-        // Create your system session token
-        const appToken = jwt.sign(
-            {
-                derivToken
-            },
-            SECRET,
-            { expiresIn: "7d" }
-        );
-
-        res.json({
-            token: appToken,
-            user: response.data
-        });
-
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).json({ message: "Login failed" });
+    if (!email || !phone || !password) {
+      return res.status(400).json({
+        message: "Missing fields"
+      });
     }
+
+    const exists = await User.findOne({ phone });
+
+    if (exists) {
+      return res.status(400).json({
+        message: "User already exists"
+      });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      email,
+      phone,
+      password: hashed,
+      balance: 0
+    });
+
+    return res.json({
+      message: "User created successfully",
+      user
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      error: err.message
+    });
+  }
 });
 
 module.exports = router;
