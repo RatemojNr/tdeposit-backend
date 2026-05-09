@@ -1,6 +1,6 @@
 const Wallet = require("../models/Wallet");
 const Transaction = require("../models/Transaction");
-const User = require("../models/User");
+const User = require("../models/UserModel");
 
 const { calculateCommission } = require("../services/commissionEngine");
 const { kesToUsd } = require("../services/exchangeEngine");
