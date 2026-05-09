@@ -5,8 +5,23 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
+const connectDB = require("./config/db");
+
 const app = express();
+
 const PORT = process.env.PORT || 3000;
+
+// ======================
+// CONNECT DATABASE
+// ======================
+connectDB()
+  .then(() => {
+    console.log("✅ MongoDB connected");
+  })
+  .catch((err) => {
+    console.log("❌ MongoDB Error:", err.message);
+    process.exit(1);
+  });
 
 // ======================
 // MIDDLEWARE
@@ -19,39 +34,37 @@ app.use(express.json({
   limit: "10mb"
 }));
 
+app.use(express.urlencoded({
+  extended: true
+}));
+
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
     max: 60,
-    message: "Too many requests, slow down."
+    message: {
+      message: "Too many requests. Please slow down."
+    }
   })
 );
 
 // ======================
-// DATABASE
-// ======================
-const connectDB = require("./config/db");
-
-connectDB()
-  .then(() => {
-    console.log("✅ MongoDB connected");
-  })
-  .catch((err) => {
-    console.log("❌ DB Error:", err.message);
-    process.exit(1);
-  });
-
-// ======================
 // ROUTES
 // ======================
+
+// AUTH ROUTES
 app.use("/api/auth", require("./routes/authRoutes"));
 
+// ADMIN ROUTES
 app.use("/api/admin", require("./routes/adminRoutes"));
 
+// WALLET ROUTES
 app.use("/api/wallet", require("./routes/walletRoutes"));
 
+// MPESA ROUTES
 app.use("/api/mpesa", require("./routes/mpesaRoutes"));
 
+// WITHDRAW ROUTES
 app.use("/api/withdraw", require("./routes/withdrawRoutes"));
 
 // ======================
@@ -59,21 +72,36 @@ app.use("/api/withdraw", require("./routes/withdrawRoutes"));
 // ======================
 app.get("/", (req, res) => {
 
-  res.json({
-    status: "TDeposit running 🚀",
-    uptime: process.uptime()
+  res.status(200).json({
+    app: "TDeposit",
+    status: "running 🚀",
+    uptime: process.uptime(),
+    timestamp: new Date()
   });
 
 });
 
 // ======================
-// ERROR HANDLER
+// 404 HANDLER
+// ======================
+app.use((req, res) => {
+
+  res.status(404).json({
+    message: "Route not found"
+  });
+
+});
+
+// ======================
+// GLOBAL ERROR HANDLER
 // ======================
 app.use((err, req, res, next) => {
 
-  console.log("🔥 SERVER ERROR:", err);
+  console.error("🔥 SERVER ERROR:");
+  console.error(err);
 
   res.status(500).json({
+    success: false,
     message: "Internal server error"
   });
 

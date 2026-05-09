@@ -2,11 +2,11 @@ const express = require("express");
 const router = express.Router();
 
 // ✅ FIXED IMPORTS (IMPORTANT)
-const admin = require("./middleware/adminMiddleware");
+const admin = require("../middleware/adminMiddleware");
 
-const User = require("./models/UserModel");
-const Ledger = require("./models/Ledger");
-const Withdrawal = require("./models/WithdrawalModel");
+const User = require("../models/UserModel");
+const Ledger = require("../models/Ledger");
+const Withdrawal = require("../models/WithdrawalModel");
 
 // ======================
 // 📊 PLATFORM STATS
