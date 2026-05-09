@@ -9,11 +9,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ======================
-// MIDDLEWARE (MUST BE FIRST)
+// MIDDLEWARE
 // ======================
 app.use(helmet());
+
 app.use(cors());
-app.use(express.json()); // IMPORTANT: enables req.body
+
+app.use(express.json({
+  limit: "10mb"
+}));
 
 app.use(
   rateLimit({
@@ -24,12 +28,14 @@ app.use(
 );
 
 // ======================
-// DB CONNECTION
+// DATABASE
 // ======================
 const connectDB = require("./config/db");
 
 connectDB()
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(() => {
+    console.log("✅ MongoDB connected");
+  })
   .catch((err) => {
     console.log("❌ DB Error:", err.message);
     process.exit(1);
@@ -38,33 +44,46 @@ connectDB()
 // ======================
 // ROUTES
 // ======================
-app.use("/api/auth", require("./authRoutes"));
-app.use("/api/admin", require("./adminRoutes"));
-app.use("/api/wallet", require("./walletRoutes"));
+app.use("/api/auth", require("./routes/authRoutes"));
+
+app.use("/api/admin", require("./routes/adminRoutes"));
+
+app.use("/api/wallet", require("./routes/walletRoutes"));
+
 app.use("/api/mpesa", require("./routes/mpesaRoutes"));
+
 app.use("/api/withdraw", require("./routes/withdrawRoutes"));
 
 // ======================
-// TEST ROUTE
+// HOME ROUTE
 // ======================
 app.get("/", (req, res) => {
+
   res.json({
     status: "TDeposit running 🚀",
     uptime: process.uptime()
   });
+
 });
 
 // ======================
 // ERROR HANDLER
 // ======================
 app.use((err, req, res, next) => {
+
   console.log("🔥 SERVER ERROR:", err);
-  res.status(500).json({ message: "Internal server error" });
+
+  res.status(500).json({
+    message: "Internal server error"
+  });
+
 });
 
 // ======================
 // START SERVER
 // ======================
 app.listen(PORT, () => {
+
   console.log(`🚀 Server running on port ${PORT}`);
+
 });
