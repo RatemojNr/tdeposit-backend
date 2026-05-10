@@ -1,26 +1,49 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
-    email: String,
-    phone: {
+
+    username: {
         type: String,
-        unique: true,
+        required: true,
+        unique: true
+    },
+
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+
+    password: {
+        type: String,
         required: true
     },
-    password: String,
-    role: {
+
+    phone: {
         type: String,
-        default: "user"
+        default: ""
     },
+
+    derivToken: {
+        type: String,
+        default: ""
+    },
+
     balance: {
         type: Number,
         default: 0
     },
+
     frozen: {
         type: Boolean,
         default: false
     }
-}, { timestamps: true });
 
-// 🔥 SAFE MODEL EXPORT (IMPORTANT FIX)
-module.exports = mongoose.models.User || mongoose.model("User", userSchema);
+}, {
+    timestamps: true
+});
+
+// ✅ PREVENT OVERWRITE ERROR
+module.exports =
+    mongoose.models.User ||
+    mongoose.model("User", userSchema);

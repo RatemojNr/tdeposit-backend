@@ -1,12 +1,15 @@
 const express = require("express");
 const router = express.Router();
 
-// ✅ FIXED IMPORTS (IMPORTANT)
+// ✅ IMPORTS
 const admin = require("../middleware/adminMiddleware");
-
 const User = require("../models/UserModel");
 const Ledger = require("../models/Ledger");
 const Withdrawal = require("../models/WithdrawalModel");
+
+// ✅ WALLET SERVICE (IMPORTANT)
+const { creditWallet, debitWallet } = require("../services/walletService");
+
 
 // ======================
 // 📊 PLATFORM STATS
@@ -27,11 +30,10 @@ router.get("/stats", admin, async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
+        return res.status(500).json({ error: error.message });
     }
 });
+
 
 // ======================
 // 👥 ALL USERS
@@ -46,84 +48,116 @@ router.get("/users", admin, async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
+        return res.status(500).json({ error: error.message });
     }
 });
+
 
 // ======================
 // 🚫 FREEZE / UNFREEZE USER
 // ======================
 router.post("/freeze-user", admin, async (req, res) => {
     try {
-        const { userId } = req.body;
+        const { userId, freeze } = req.body;
 
         const user = await User.findById(userId);
 
         if (!user) {
-            return res.status(404).json({
-                message: "User not found"
-            });
+            return res.status(404).json({ message: "User not found" });
         }
 
-        user.frozen = !user.frozen;
+        user.frozen = freeze;
         await user.save();
 
         return res.json({
-            message: user.frozen ? "User frozen" : "User unfrozen",
+            message: freeze ? "User frozen" : "User unfrozen",
             user
         });
 
     } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
+        return res.status(500).json({ error: error.message });
     }
 });
 
+
 // ======================
-// 💰 MANUAL BALANCE ADJUSTMENT
+// 💰 CREDIT BALANCE (SAFE)
 // ======================
 router.post("/adjust-balance", admin, async (req, res) => {
     try {
         const { userId, amount, description } = req.body;
 
-        const user = await User.findById(userId);
+        const safeAmount = parseFloat(amount);
 
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found"
-            });
+        if (isNaN(safeAmount)) {
+            return res.status(400).json({ message: "Invalid amount" });
         }
 
-        const safeAmount = Number(amount);
-
-        user.balance = (user.balance || 0) + safeAmount;
-
-        await user.save();
-
-        // LOG TO LEDGER
-        const tx = await Ledger.create({
+        const user = await creditWallet(
             userId,
-            type: "ADJUSTMENT",
-            amount: Math.abs(safeAmount),
-            description: description || "Manual adjustment",
-            status: "completed",
-            balance: user.balance
-        });
+            safeAmount,
+            "ADJUSTMENT",
+            description || "Manual adjustment"
+        );
 
         return res.json({
-            message: "Balance adjusted successfully",
-            newBalance: user.balance,
-            transaction: tx
+            message: "Balance credited successfully",
+            newBalance: user.balance
         });
 
     } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
+        return res.status(500).json({ error: error.message });
     }
 });
+
+
+// ======================
+// 💸 DEBIT BALANCE (SAFE)
+// ======================
+router.post("/deduct-balance", admin, async (req, res) => {
+    try {
+        const { userId, amount, description } = req.body;
+
+        const safeAmount = parseFloat(amount);
+
+        if (isNaN(safeAmount)) {
+            return res.status(400).json({ message: "Invalid amount" });
+        }
+
+        const user = await debitWallet(
+            userId,
+            safeAmount,
+            "ADMIN_DEBIT",
+            description || "Admin deduction"
+        );
+
+        return res.json({
+            message: "Balance deducted successfully",
+            newBalance: user.balance
+        });
+
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+});
+
+
+// ======================
+// 📜 MANUAL WITHDRAWAL LIST (optional)
+// ======================
+router.get("/withdrawals", admin, async (req, res) => {
+    try {
+        const withdrawals = await Withdrawal.find().populate("userId");
+
+        return res.json({
+            total: withdrawals.length,
+            withdrawals
+        });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+});
+
 
 module.exports = router;

@@ -1,27 +1,37 @@
 const mongoose = require("mongoose");
 
-const withdrawalSchema = new mongoose.Schema({
+const withdrawalSchema = new mongoose.Schema(
+    {
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
 
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+        amount: {
+            type: Number,
+            required: true
+        },
+
+        phone: {
+            type: String,
+            required: true
+        },
+
+        method: {
+            type: String,
+            default: "mpesa"
+        },
+
+        status: {
+            type: String,
+            enum: ["pending", "approved", "paid", "rejected"],
+            default: "pending"
+        }
     },
+    { timestamps: true }
+);
 
-    phone: String,
-
-    amount: Number,
-
-    status: {
-        type: String,
-        default: "pending" // pending | success | failed
-    },
-
-    mpesaReceipt: String,
-
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
-});
-
-module.exports = mongoose.model("Withdrawal", withdrawalSchema);
+module.exports =
+    mongoose.models.Withdrawal ||
+    mongoose.model("Withdrawal", withdrawalSchema);
